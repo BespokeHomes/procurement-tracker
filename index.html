@@ -281,7 +281,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('import-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="importItems()">Import items</button>
+      <button class="btn btn-primary" onclick="aiImportText()">Import items</button>
     </div>
   </div>
 </div>
@@ -617,7 +617,31 @@ function openImport() {
   document.getElementById('import-modal').classList.add('open');
 }
 
-async function importItems() {
+async function aiImportText() {
+  const proj = document.getElementById('imp-proj').value.trim();
+  const raw = document.getElementById('imp-data').value.trim();
+  if (!proj) { toast('Project address is required.'); return; }
+  if (!raw) { toast('No items to import — upload a PDF or paste text.'); return; }
+  const vendor = document.getElementById('imp-vendor').value.trim();
+  const st = document.getElementById('pdf-import-status');
+  st.innerHTML = '<div class="ai-result loading"><span class="loading-spinner"></span>Reading pasted text...</div>';
+  const data = await callClaude([{ role:'user', content:`You are helping Bespoke Homes import an order schedule. Extract every product/item from this text.\n\nFor each item extract:\n- item: full product description\n- model: item number or model number\n- category: one of Bath Accessories, Hardware, Lighting, Mirrors, Plumbing, Tile\n- qty: quantity as integer\n- room: room or location\n- vendor: supplier name if listed${vendor?' (default: '+vendor+')':''}\n\nRespond ONLY with valid JSON:\n{"items":[{"item":"desc","model":"#","category":"cat","qty":1,"room":"room","vendor":"vendor"}],"notes":"summary"}\n\nText:\n${raw}` }]);
+  try {
+    const txt = data.content.filter(b => b.type==='text').map(b => b.text).join('');
+    const res = JSON.parse(txt.replace(/```json|```/g,'').trim());
+    if (res.items && res.items.length > 0) {
+      const rows = res.items.map(i => ({ project:proj, item:i.item, model:i.model||'', category:i.category||'Bath Accessories', qty:parseInt(i.qty)||1, room:i.room||null, vendor:i.vendor||vendor||'', status:'pending', lead_time:null, ordered_date:null, eta_date:null, arrived_date:null, dispatched_date:null, notes:'' })).filter(i => i.item);
+      const { error } = await sb.from('items').insert(rows);
+      if (error) { st.innerHTML = `<div class="ai-result error">Import failed: ${error.message}</div>`; return; }
+      closeModal('import-modal'); await loadItems();
+      toast(`${rows.length} items imported for ${proj}`);
+    } else {
+      st.innerHTML = `<div class="ai-result error">No items found. ${res.notes||''}</div>`;
+    }
+  } catch(e) { st.innerHTML = `<div class="ai-result error">Could not parse. Try again.</div>`; }
+}
+  
+  async function importItems() {
   const proj = document.getElementById('imp-proj').value.trim();
   const raw = document.getElementById('imp-data').value.trim();
   if (!proj) { toast('Project address is required.'); return; }
