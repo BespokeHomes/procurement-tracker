@@ -412,7 +412,7 @@
           <thead>
             <tr>
               <th>Project</th>
-              <th>Item</th>
+              <th>Room</th><th>Item</th>
               <th>Model #</th>
               <th class="hide-mobile">Category</th>
               <th>Qty</th>
@@ -508,7 +508,7 @@
     <div style="display:flex;flex-direction:column;gap:12px;">
       <div class="fg"><label>Project name *</label><input type="text" id="imp-proj" placeholder="e.g. 142 Oak Street" style="height:36px;"></div>
       <div class="fg">
-        <label>Paste schedule rows — one item per line: Description, Model#, Category, Qty</label>
+        <div class="upload-zone" onclick="document.getElementById('pdf-upload').click()"><div class="upload-icon">📄</div><div class="upload-label">Tap to upload your schedule PDF</div><div class="upload-hint">Claude reads and extracts all items automatically</div></div><input type="file" id="pdf-upload" accept=".pdf,application/pdf" style="display:none;" onchange="handlePDFImport(event)"><div id="pdf-import-status"></div><div class="divider" style="margin:8px 0;"><hr><span>or paste rows manually</span><hr></div><div class="upload-zone" onclick="document.getElementById('pdf-upload').click()"><div class="upload-icon">📄</div><div class="upload-label">Tap to upload your schedule PDF</div><div class="upload-hint">Claude reads and extracts all items automatically</div></div><input type="file" id="pdf-upload" accept=".pdf,application/pdf" style="display:none;" onchange="handlePDFImport(event)"><div id="pdf-import-status"></div><div class="divider" style="margin:8px 0;"><hr><span>or paste rows manually</span><hr></div><label>Paste schedule rows — one item per line: Description, Model#, Category, Qty</label>
         <textarea id="imp-data" style="height:150px;font-family:'DM Mono',monospace;font-size:12px;" placeholder="Kohler Purist Faucet, K-99000, Plumbing, 2&#10;Lutron Caseta Dimmer, PD-6WCL, Lighting, 8&#10;Baldwin Lever Handle, 5485, Hardware, 12"></textarea>
       </div>
       <div class="fg"><label>Vendor (optional — applies to all)</label><input type="text" id="imp-vendor" style="height:36px;"></div>
