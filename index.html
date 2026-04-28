@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Procurement Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: rgba(0,0,0,0.09);
+    --border2: rgba(0,0,0,0.15);
+    --text: #1a1916;
+    --text2: #6b6860;
+    --text3: #9c9a94;
+    --accent: #1a5c3a;
+    --accent-light: #e8f4ed;
+    --accent-mid: #2d7a50;
+    --amber: #92520a;
+    --amber-bg: #fdf3e3;
+    --red: #8b2020;
+    --red-bg: #fdeaea;
+    --blue: #1a3d6b;
+    --blue-bg: #e8f0fb;
+    --purple: #4a2d8b;
+    --purple-bg: #f0ebfb;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 58px;
+    gap: 16px;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.3px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 14px;
+  }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  /* Layout */
+  .main { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem 3rem; }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: box-shadow .15s, transform .15s;
+  }
+  .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+  .stat-card.active { border-color: var(--accent); background: var(--accent-light); }
+  .stat-label { font-size: 11px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .stat-value { font-size: 26px; font-weight: 600; letter-spacing: -1px; color: var(--text); }
+  .stat-card.active .stat-value { color: var(--accent); }
+  .stat-value.danger { color: var(--red); }
+
+  /* Tabs */
+  .tabs-row {
+    display: flex;
+    gap: 2px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.25rem;
+    overflow-x: auto;
+  }
+  .tab-btn {
+    padding: 9px 16px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    color: var(--text2);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    margin-bottom: -1px;
+    transition: color .15s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--surface2); color: var(--text2);
+    border-radius: 20px; font-size: 11px; padding: 1px 7px; margin-left: 5px;
+    font-weight: 500;
+  }
+  .tab-btn.active .tab-count { background: var(--accent-light); color: var(--accent); }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .search-wrap { position: relative; flex: 1; min-width: 200px; max-width: 320px; }
+  .search-wrap input {
+    width: 100%;
+    padding: 8px 12px 8px 34px;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+  }
+  .search-icon {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--text3); font-size: 14px; pointer-events: none;
+  }
+  select.filter {
+    padding: 8px 12px;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .spacer { flex: 1; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    color: var(--text);
+    transition: background .15s, box-shadow .15s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--surface2); box-shadow: var(--shadow); }
+  .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-mid); }
+  .btn-teal { background: var(--accent-light); color: var(--accent); border-color: rgba(26,92,58,.2); }
+  .btn-teal:hover { background: #d4eadb; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-icon { padding: 5px 7px; border: none; background: none; cursor: pointer; color: var(--text2); border-radius: var(--radius-sm); font-size: 14px; }
+  .btn-icon:hover { background: var(--surface2); color: var(--text); }
+
+  /* Table */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: var(--surface2);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    color: var(--text);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: #fafaf8; }
+
+  /* Badges */
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 9px; border-radius: 20px;
+    font-size: 11px; font-weight: 500; white-space: nowrap;
+  }
+  .b-pending { background: var(--surface2); color: var(--text2); }
+  .b-ordered { background: var(--blue-bg); color: var(--blue); }
+  .b-arrived { background: var(--accent-light); color: var(--accent); }
+  .b-dispatched { background: #e8f7ee; color: #1a6b3a; }
+  .b-delayed { background: var(--red-bg); color: var(--red); }
+  .cat-Plumbing { background: var(--blue-bg); color: var(--blue); }
+  .cat-Lighting { background: var(--amber-bg); color: var(--amber); }
+  .cat-Hardware { background: var(--purple-bg); color: var(--purple); }
+  .cat-Appliance { background: var(--red-bg); color: var(--red); }
+  .cat-HVAC { background: var(--accent-light); color: var(--accent); }
+  .cat-Other { background: var(--surface2); color: var(--text2); }
+
+  .status-pill {
+    font-size: 12px; height: 26px; padding: 0 10px;
+    border-radius: 20px; border: 1px solid var(--border2);
+    background: var(--surface2); color: var(--text);
+    font-family: 'DM Sans', sans-serif; cursor: pointer;
+  }
+  .overdue { color: var(--red) !important; font-weight: 500; }
+  .mono { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text2); }
+
+  /* Check-in view */
+  .checkin-wrap { display: flex; flex-direction: column; gap: 1.25rem; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+  }
+  .card-title { font-size: 14px; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+  .checkin-list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+  .checkin-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    transition: opacity .2s;
+  }
+  .checkin-row.checked { opacity: .45; }
+  .checkin-row input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .ci-name { flex: 1; font-size: 13px; font-weight: 500; }
+  .ci-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .ci-model { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); min-width: 90px; }
+  .ci-proj { font-size: 11px; color: var(--text2); min-width: 120px; }
+
+  .divider { display: flex; align-items: center; gap: 12px; }
+  .divider hr { flex: 1; border: none; border-top: 1px solid var(--border); }
+  .divider span { font-size: 12px; color: var(--text3); white-space: nowrap; }
+
+  .upload-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    margin-bottom: 12px;
+  }
+  .upload-zone:hover { border-color: var(--accent); background: var(--accent-light); }
+  .upload-icon { font-size: 28px; margin-bottom: 6px; }
+  .upload-label { font-size: 13px; font-weight: 500; color: var(--text); }
+  .upload-hint { font-size: 12px; color: var(--text2); margin-top: 3px; }
+
+  .ai-result {
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .ai-result.success { background: var(--accent-light); color: var(--accent); border: 1px solid rgba(26,92,58,.2); }
+  .ai-result.error { background: var(--red-bg); color: var(--red); border: 1px solid rgba(139,32,32,.15); }
+  .ai-result.loading { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .ai-match-item { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4); z-index: 200;
+    align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    width: 600px; max-width: 100%;
+    max-height: 90vh; overflow-y: auto;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+  }
+  .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 1.25rem; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fg { display: flex; flex-direction: column; gap: 4px; }
+  .fg.full { grid-column: 1/-1; }
+  .fg label { font-size: 12px; font-weight: 500; color: var(--text2); }
+  .fg input, .fg select, .fg textarea {
+    padding: 8px 10px; border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface); color: var(--text);
+  }
+  .fg textarea { height: 60px; resize: vertical; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text2); }
+  .empty-state .empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+  .loading-spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid var(--border2); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--text); color: white;
+    padding: 12px 18px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 500;
+    box-shadow: var(--shadow-md);
+    z-index: 999;
+    animation: slideUp .2s ease;
+    pointer-events: none;
+  }
+  @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+  @media (max-width: 768px) {
+    .header { padding: 0 1rem; }
+    .main { padding: 1rem 1rem 3rem; }
+    .form-grid { grid-template-columns: 1fr; }
+    .fg.full { grid-column: 1; }
+    .hide-mobile { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">🏗</div>
+      Procurement Tracker
+    </div>
+    <div class="header-actions">
+      <button class="btn" onclick="openImport()">📋 Import schedule</button>
+      <button class="btn btn-teal" onclick="setTab('checkin')">📦 Check in arrivals</button>
+      <button class="btn btn-primary" onclick="openAdd()">+ Add item</button>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+  <div class="stats-grid" id="stats"></div>
+
+  <div class="tabs-row" id="tabs"></div>
+
+  <div id="view-table">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search" placeholder="Search item, model, project..." oninput="render()">
+      </div>
+      <select class="filter" id="f-project" onchange="render()"><option value="">All projects</option></select>
+      <select class="filter" id="f-cat" onchange="render()">
+        <option value="">All categories</option>
+        <option>Plumbing</option><option>Lighting</option><option>Hardware</option><option>Appliance</option><option>HVAC</option><option>Other</option>
+      </select>
+      <div class="spacer"></div>
+      <span id="row-count" style="font-size:12px;color:var(--text3);"></span>
+    </div>
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Project</th>
+              <th>Item</th>
+              <th>Model #</th>
+              <th class="hide-mobile">Category</th>
+              <th>Qty</th>
+              <th class="hide-mobile">Vendor</th>
+              <th>ETA</th>
+              <th>Status</th>
+              <th class="hide-mobile">Dates</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-checkin" style="display:none;">
+    <div class="checkin-wrap">
+      <div class="card">
+        <div class="card-title">Tick off items as they arrive</div>
+        <div class="checkin-list" id="checkin-list"></div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:1rem;flex-wrap:wrap;">
+          <button class="btn btn-teal" onclick="confirmCheckins()">✓ Mark selected as arrived</button>
+          <span id="checkin-hint" style="font-size:12px;color:var(--text2);"></span>
+        </div>
+      </div>
+
+      <div class="divider"><hr><span>or use AI-assisted check-in</span><hr></div>
+
+      <div class="card">
+        <div class="card-title">📷 Upload photo or order slip</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Photo of a box label, shipping receipt, or packing slip — Claude will match model numbers to your pending items automatically.</p>
+        <div class="upload-zone" onclick="document.getElementById('file-upload').click()">
+          <div class="upload-icon">📦</div>
+          <div class="upload-label">Tap to upload image or PDF</div>
+          <div class="upload-hint">JPG, PNG, PDF supported</div>
+        </div>
+        <input type="file" id="file-upload" accept="image/*,.pdf" style="display:none;" onchange="handleUpload(event)">
+
+        <div class="divider" style="margin:12px 0;"><hr><span>or paste order confirmation text</span><hr></div>
+
+        <textarea id="paste-text" placeholder="Paste text from order confirmation email, invoice, or packing slip..." style="width:100%;height:90px;font-size:13px;padding:10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);resize:vertical;"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn btn-teal" onclick="parseText()">Match to pending items ↗</button>
+          <button class="btn" onclick="document.getElementById('paste-text').value='';document.getElementById('ai-out').innerHTML=''">Clear</button>
+        </div>
+        <div id="ai-out"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="item-modal">
+  <div class="modal">
+    <h2 id="modal-title">Add item</h2>
+    <div class="form-grid">
+      <div class="fg"><label>Project *</label><input type="text" id="f-project-input" list="proj-dl"><datalist id="proj-dl"></datalist></div>
+      <div class="fg"><label>Category</label>
+        <select id="f-cat-input"><option>Plumbing</option><option>Lighting</option><option>Hardware</option><option>Appliance</option><option>HVAC</option><option>Other</option></select>
+      </div>
+      <div class="fg full"><label>Item description *</label><input type="text" id="f-item" placeholder="e.g. Kohler Purist Faucet"></div>
+      <div class="fg"><label>Model number</label><input type="text" id="f-model"></div>
+      <div class="fg"><label>Quantity</label><input type="number" id="f-qty" value="1" min="1"></div>
+      <div class="fg"><label>Vendor / Supplier</label><input type="text" id="f-vendor"></div>
+      <div class="fg"><label>Lead time (days)</label><input type="number" id="f-leadtime" min="0"></div>
+      <div class="fg"><label>Status</label>
+        <select id="f-status">
+          <option value="pending">Pending order</option>
+          <option value="ordered">Ordered / in transit</option>
+          <option value="arrived">Arrived at office</option>
+          <option value="dispatched">Dispatched to site</option>
+          <option value="delayed">Delayed</option>
+        </select>
+      </div>
+      <div class="fg"><label>Order date</label><input type="date" id="f-ordered"></div>
+      <div class="fg"><label>ETA</label><input type="date" id="f-eta"></div>
+      <div class="fg"><label>Arrived at office</label><input type="date" id="f-arrived"></div>
+      <div class="fg"><label>Dispatched to site</label><input type="date" id="f-dispatched"></div>
+      <div class="fg full"><label>Notes</label><textarea id="f-notes"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('item-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveItem()">Save item</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal">
+    <h2>Import from schedule</h2>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="fg"><label>Project name *</label><input type="text" id="imp-proj" placeholder="e.g. 142 Oak Street" style="height:36px;"></div>
+      <div class="fg">
+        <label>Paste schedule rows — one item per line: Description, Model#, Category, Qty</label>
+        <textarea id="imp-data" style="height:150px;font-family:'DM Mono',monospace;font-size:12px;" placeholder="Kohler Purist Faucet, K-99000, Plumbing, 2&#10;Lutron Caseta Dimmer, PD-6WCL, Lighting, 8&#10;Baldwin Lever Handle, 5485, Hardware, 12"></textarea>
+      </div>
+      <div class="fg"><label>Vendor (optional — applies to all)</label><input type="text" id="imp-vendor" style="height:36px;"></div>
+      <p style="font-size:12px;color:var(--text2);">All imported items will be set to "Pending order". Update details individually after importing.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('import-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="importItems()">Import items</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://nyasyzchugvqumzjxopu.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55YXN5emNodWd2cXVtemp4b3B1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDkyODcsImV4cCI6MjA5Mjk4NTI4N30.Pc9_jceweINaxDtdrMZVSD1D1bkra7-bOmVr7bRKl0s';
+const ANTHROPIC_KEY_NOTE = 'REPLACE_WITH_YOUR_ANTHROPIC_KEY';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let items = [];
+let currentTab = 'all';
+let checkedIds = new Set();
+let editingId = null;
+
+const statusLabels = { pending:'Pending order', ordered:'Ordered / transit', arrived:'At office', dispatched:'Dispatched', delayed:'Delayed' };
+const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function fmt(d) {
+  if (!d) return '<span style="color:var(--text3)">—</span>';
+  const [y,m,day] = d.split('-');
+  return `${months[+m-1]} ${parseInt(day)}`;
+}
+function today() { return new Date().toISOString().split('T')[0]; }
+function isOverdue(i) { return i.eta_date && i.eta_date < today() && !['arrived','dispatched'].includes(i.status); }
+function getProjects() { return [...new Set(items.map(i => i.project))].sort(); }
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2800);
+}
+
+// --- Data ---
+async function loadItems() {
+  const { data, error } = await sb.from('items').select('*').order('created_at', { ascending: false });
+  if (error) { console.error(error); return; }
+  items = data || [];
+  render();
+}
+
+async function upsertItem(item) {
+  const { error } = item.id
+    ? await sb.from('items').update(item).eq('id', item.id)
+    : await sb.from('items').insert(item);
+  if (error) { toast('Save failed: ' + error.message); return false; }
+  return true;
+}
+
+async function deleteItemDB(id) {
+  const { error } = await sb.from('items').delete().eq('id', id);
+  if (error) { toast('Delete failed'); return false; }
+  return true;
+}
+
+// --- Stats & Tabs ---
+function renderStats() {
+  const c = { pending:0, ordered:0, arrived:0, dispatched:0, delayed:0 };
+  items.forEach(i => { if (c[i.status] !== undefined) c[i.status]++; });
+  const ov = items.filter(isOverdue).length;
+  const tabMap = { all:null, pending:'pending', ordered:['ordered','delayed'], checkin:'arrived', dispatched:'dispatched' };
+
+  document.getElementById('stats').innerHTML = [
+    ['All items', items.length, 'all'],
+    ['Pending order', c.pending, 'pending'],
+    ['Ordered / transit', c.ordered + c.delayed, 'ordered'],
+    ['At office', c.arrived, 'checkin'],
+    ['At site', c.dispatched, 'dispatched'],
+    ['Overdue', ov, null, ov > 0],
+  ].map(([label, val, tab, danger]) => `
+    <div class="stat-card${currentTab === tab ? ' active' : ''}" ${tab ? `onclick="setTab('${tab}')"` : ''}>
+      <div class="stat-label">${label}</div>
+      <div class="stat-value${danger ? ' danger' : ''}">${val}</div>
+    </div>`).join('');
+
+  const tabs = [
+    ['all', 'All items', items.length],
+    ['pending', 'Pending', c.pending],
+    ['ordered', 'Ordered / transit', c.ordered + c.delayed],
+    ['checkin', 'Check in arrivals', c.arrived],
+    ['dispatched', 'Dispatched to site', c.dispatched],
+  ];
+  document.getElementById('tabs').innerHTML = tabs.map(([id, label, count]) => `
+    <button class="tab-btn${currentTab === id ? ' active' : ''}" onclick="setTab('${id}')">${label}<span class="tab-count">${count}</span></button>`).join('');
+}
+
+function setTab(tab) {
+  currentTab = tab;
+  const isCheckin = tab === 'checkin';
+  document.getElementById('view-table').style.display = isCheckin ? 'none' : 'block';
+  document.getElementById('view-checkin').style.display = isCheckin ? 'block' : 'none';
+  renderStats();
+  if (isCheckin) renderCheckin(); else render();
+}
+
+// --- Table ---
+function filteredItems() {
+  const proj = document.getElementById('f-project').value;
+  const cat = document.getElementById('f-cat').value;
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const tabFilter = { all: null, pending: ['pending'], ordered: ['ordered','delayed'], dispatched: ['dispatched'] };
+  const allowed = tabFilter[currentTab];
+  return items.filter(i => {
+    if (proj && i.project !== proj) return false;
+    if (cat && i.category !== cat) return false;
+    if (q && !i.item.toLowerCase().includes(q) && !(i.model||'').toLowerCase().includes(q) && !i.project.toLowerCase().includes(q)) return false;
+    if (allowed && !allowed.includes(i.status)) return false;
+    return true;
+  });
+}
+
+function render() {
+  renderStats();
+  const projs = getProjects();
+  const sel = document.getElementById('f-project');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All projects</option>' + projs.map(p => `<option${p===cur?' selected':''}>${p}</option>`).join('');
+  const dl = document.getElementById('proj-dl');
+  if (dl) dl.innerHTML = projs.map(p => `<option value="${p}">`).join('');
+
+  const data = filteredItems();
+  document.getElementById('row-count').textContent = `${data.length} item${data.length !== 1 ? 's' : ''}`;
+
+  const tbody = document.getElementById('tbody');
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">📭</div>No items found</div></td></tr>`;
+    return;
+  }
+
+  const dateCell = (item) => {
+    if (item.status === 'dispatched') return `<span style="font-size:11px;color:var(--text2)">→ site ${fmt(item.dispatched_date)}</span>`;
+    if (item.status === 'arrived') return `<span style="font-size:11px;color:var(--accent)">In ${fmt(item.arrived_date)}</span>`;
+    if (item.ordered_date) return `<span style="font-size:11px;color:var(--text3)">Ord ${fmt(item.ordered_date)}</span>`;
+    return '<span style="color:var(--text3);font-size:11px">—</span>';
+  };
+
+  tbody.innerHTML = data.map(item => `
+    <tr>
+      <td style="font-weight:500;font-size:12px;">${item.project}</td>
+      <td>
+        <div style="font-size:13px;">${item.item}</div>
+        ${item.notes ? `<div style="font-size:11px;color:var(--text2);margin-top:2px;">${item.notes.substring(0,45)}${item.notes.length>45?'…':''}</div>` : ''}
+      </td>
+      <td><span class="mono">${item.model || '—'}</span></td>
+      <td class="hide-mobile"><span class="badge cat-${item.category||'Other'}" style="font-size:10px;padding:2px 7px;">${item.category||'Other'}</span></td>
+      <td style="text-align:center;">${item.qty}</td>
+      <td class="hide-mobile" style="font-size:12px;color:var(--text2);">${item.vendor||'—'}</td>
+      <td class="${isOverdue(item)?'overdue':''}" style="font-size:12px;">${fmt(item.eta_date)}${isOverdue(item)?' ⚠':''}</td>
+      <td>
+        <select class="status-pill" onchange="updateStatus('${item.id}',this.value)">
+          ${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}"${item.status===v?' selected':''}>${l}</option>`).join('')}
+        </select>
+      </td>
+      <td class="hide-mobile">${dateCell(item)}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn-icon" onclick="editItem('${item.id}')" title="Edit">✎</button>
+        <button class="btn-icon" onclick="removeItem('${item.id}')" title="Delete" style="color:var(--red);">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function updateStatus(id, val) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const prev = item.status;
+  item.status = val;
+  const t = today();
+  if (val === 'arrived' && !item.arrived_date) item.arrived_date = t;
+  if (val === 'dispatched' && !item.dispatched_date) item.dispatched_date = t;
+  await sb.from('items').update({ status: val, arrived_date: item.arrived_date, dispatched_date: item.dispatched_date }).eq('id', id);
+  render();
+  toast(`Marked as "${statusLabels[val]}"`);
+}
+
+// --- Check-in view ---
+function renderCheckin() {
+  const pending = items.filter(i => ['ordered','delayed'].includes(i.status));
+  const list = document.getElementById('checkin-list');
+  if (!pending.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:1.5rem;">No items currently ordered or in transit.</div>';
+    document.getElementById('checkin-hint').textContent = '';
+    return;
+  }
+  list.innerHTML = pending.map(item => `
+    <div class="checkin-row${checkedIds.has(item.id)?' checked':''}" id="cr-${item.id}">
+      <input type="checkbox" ${checkedIds.has(item.id)?'checked':''} onchange="toggleCheckin('${item.id}',this.checked)">
+      <div style="flex:1;">
+        <div class="ci-name">${item.item} <span style="font-weight:400;color:var(--text2);">×${item.qty}</span></div>
+        <div class="ci-sub">${item.project} ${item.vendor?'· '+item.vendor:''}</div>
+      </div>
+      <span class="ci-model">${item.model||''}</span>
+      ${isOverdue(item) ? `<span class="badge b-delayed" style="font-size:10px;">overdue</span>` : `<span style="font-size:11px;color:var(--text3)">ETA ${fmt(item.eta_date)}</span>`}
+    </div>`).join('');
+  document.getElementById('checkin-hint').textContent = checkedIds.size ? `${checkedIds.size} selected` : '';
+}
+
+function toggleCheckin(id, checked) {
+  if (checked) checkedIds.add(id); else checkedIds.delete(id);
+  renderCheckin();
+}
+
+async function confirmCheckins() {
+  if (!checkedIds.size) { toast('Select at least one item first.'); return; }
+  const t = today();
+  for (const id of checkedIds) {
+    const item = items.find(i => i.id === id);
+    if (item) {
+      item.status = 'arrived'; item.arrived_date = t;
+      await sb.from('items').update({ status: 'arrived', arrived_date: t }).eq('id', id);
+    }
+  }
+  const count = checkedIds.size;
+  checkedIds.clear();
+  renderCheckin(); renderStats();
+  toast(`${count} item${count>1?'s':''} marked as arrived today`);
+}
+
+// --- AI check-in ---
+async function callClaude(messages, isVision) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages })
+  });
+  return res.json();
+}
+
+function buildPendingList() {
+  return items.filter(i => ['ordered','delayed','pending'].includes(i.status))
+    .map(i => `- "${i.item}" | Model: ${i.model||'unknown'} | Project: ${i.project} | ID: ${i.id}`)
+    .join('\n');
+}
+
+async function handleUpload(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const out = document.getElementById('ai-out');
+  out.innerHTML = '<div class="ai-result loading"><span class="loading-spinner"></span> Reading image...</div>';
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const base64 = reader.result.split(',')[1];
+    const mediaType = file.type || 'image/jpeg';
+    const pending = buildPendingList();
+    const data = await callClaude([{ role: 'user', content: [
+      { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+      { type: 'text', text: `You are helping a custom home builder check in deliveries. Examine this image for model numbers, product codes, item names, or order references.\n\nItems currently on order:\n${pending}\n\nMatch what you see to the list above. Respond ONLY with valid JSON:\n{"matched":[{"id":"item_id","item":"name","model":"model#","confidence":"high/medium/low","evidence":"what you saw"}],"notes":"brief summary"}` }
+    ]}]);
+    processAIResponse(data, out);
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+async function parseText() {
+  const txt = document.getElementById('paste-text').value.trim();
+  if (!txt) { toast('Paste some text first.'); return; }
+  const out = document.getElementById('ai-out');
+  out.innerHTML = '<div class="ai-result loading"><span class="loading-spinner"></span> Matching items...</div>';
+  const pending = buildPendingList();
+  const data = await callClaude([{ role: 'user', content: `You are helping a custom home builder check in deliveries. Here is text from an order confirmation or packing slip:\n\n${txt}\n\nItems currently on order:\n${pending}\n\nMatch the text to items. Respond ONLY with valid JSON:\n{"matched":[{"id":"item_id","item":"name","model":"model#","confidence":"high/medium/low","evidence":"what matched"}],"notes":"brief summary"}` }]);
+  processAIResponse(data, out);
+}
+
+function processAIResponse(data, out) {
+  try {
+    const txt = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    const res = JSON.parse(txt.replace(/```json|```/g, '').trim());
+    if (res.matched && res.matched.length > 0) {
+      const high = res.matched.filter(m => m.confidence !== 'low');
+      let html = `<div class="ai-result success"><strong>Found ${res.matched.length} match${res.matched.length>1?'es':''}:</strong>`;
+      res.matched.forEach(m => {
+        html += `<div class="ai-match-item">✓ ${m.item} <span style="font-family:'DM Mono',monospace;font-size:11px;opacity:.7;">${m.model}</span> <span style="font-size:11px;opacity:.6;">(${m.confidence})</span></div>`;
+      });
+      if (res.notes) html += `<div style="font-size:12px;margin-top:6px;opacity:.8;">${res.notes}</div>`;
+      if (high.length) html += `<button class="btn btn-teal" style="margin-top:10px;font-size:12px;" onclick='applyMatches(${JSON.stringify(high)})'>Mark ${high.length} item${high.length>1?'s':''} as arrived</button>`;
+      html += '</div>';
+      out.innerHTML = html;
+    } else {
+      out.innerHTML = `<div class="ai-result error">No matching items found. ${res.notes||'Try uploading a clearer image or paste the order text instead.'}</div>`;
+    }
+  } catch(e) {
+    out.innerHTML = `<div class="ai-result error">Could not read response. Try pasting the order text below instead.</div>`;
+  }
+}
+
+async function applyMatches(matched) {
+  const t = today(); let count = 0;
+  for (const m of matched) {
+    const item = items.find(i => i.id === m.id) || items.find(i => i.model && i.model.toLowerCase() === (m.model||'').toLowerCase() && ['ordered','delayed','pending'].includes(i.status));
+    if (item) {
+      item.status = 'arrived'; item.arrived_date = t; count++;
+      await sb.from('items').update({ status: 'arrived', arrived_date: t }).eq('id', item.id);
+    }
+  }
+  document.getElementById('ai-out').innerHTML = `<div class="ai-result success">✓ ${count} item${count>1?'s':''} marked as arrived today.</div>`;
+  renderStats(); renderCheckin();
+  toast(`${count} item${count>1?'s':''} marked arrived`);
+}
+
+// --- Add / Edit / Delete ---
+function openAdd() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Add item';
+  ['f-project-input','f-item','f-model','f-vendor','f-notes'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-cat-input').value = 'Plumbing';
+  document.getElementById('f-qty').value = 1;
+  document.getElementById('f-status').value = 'pending';
+  ['f-leadtime','f-ordered','f-eta','f-arrived','f-dispatched'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('item-modal').classList.add('open');
+}
+
+function editItem(id) {
+  editingId = id;
+  const it = items.find(i => i.id === id); if (!it) return;
+  document.getElementById('modal-title').textContent = 'Edit item';
+  document.getElementById('f-project-input').value = it.project || '';
+  document.getElementById('f-item').value = it.item || '';
+  document.getElementById('f-model').value = it.model || '';
+  document.getElementById('f-cat-input').value = it.category || 'Plumbing';
+  document.getElementById('f-qty').value = it.qty || 1;
+  document.getElementById('f-vendor').value = it.vendor || '';
+  document.getElementById('f-status').value = it.status || 'pending';
+  document.getElementById('f-leadtime').value = it.lead_time || '';
+  document.getElementById('f-ordered').value = it.ordered_date || '';
+  document.getElementById('f-eta').value = it.eta_date || '';
+  document.getElementById('f-arrived').value = it.arrived_date || '';
+  document.getElementById('f-dispatched').value = it.dispatched_date || '';
+  document.getElementById('f-notes').value = it.notes || '';
+  document.getElementById('item-modal').classList.add('open');
+}
+
+async function saveItem() {
+  const proj = document.getElementById('f-project-input').value.trim();
+  const item = document.getElementById('f-item').value.trim();
+  if (!proj || !item) { toast('Project and item description are required.'); return; }
+  const data = {
+    project: proj, item,
+    model: document.getElementById('f-model').value.trim(),
+    category: document.getElementById('f-cat-input').value,
+    qty: parseInt(document.getElementById('f-qty').value) || 1,
+    vendor: document.getElementById('f-vendor').value.trim(),
+    status: document.getElementById('f-status').value,
+    lead_time: parseInt(document.getElementById('f-leadtime').value) || null,
+    ordered_date: document.getElementById('f-ordered').value || null,
+    eta_date: document.getElementById('f-eta').value || null,
+    arrived_date: document.getElementById('f-arrived').value || null,
+    dispatched_date: document.getElementById('f-dispatched').value || null,
+    notes: document.getElementById('f-notes').value.trim(),
+  };
+  if (editingId) data.id = editingId;
+  const ok = await upsertItem(data);
+  if (ok) {
+    closeModal('item-modal');
+    await loadItems();
+    toast(editingId ? 'Item updated' : 'Item added');
+  }
+}
+
+async function removeItem(id) {
+  if (!confirm('Remove this item?')) return;
+  const ok = await deleteItemDB(id);
+  if (ok) { items = items.filter(i => i.id !== id); render(); toast('Item removed'); }
+}
+
+// --- Import ---
+function openImport() {
+  document.getElementById('imp-proj').value = '';
+  document.getElementById('imp-data').value = '';
+  document.getElementById('imp-vendor').value = '';
+  document.getElementById('import-modal').classList.add('open');
+}
+
+async function importItems() {
+  const proj = document.getElementById('imp-proj').value.trim();
+  const raw = document.getElementById('imp-data').value.trim();
+  if (!proj || !raw) { toast('Project and items are required.'); return; }
+  const vendor = document.getElementById('imp-vendor').value.trim();
+  const cats = ['Plumbing','Lighting','Hardware','Appliance','HVAC','Other'];
+  const rows = raw.split('\n').filter(l => l.trim()).map(line => {
+    const p = line.split(',').map(s => s.trim());
+    const cat = cats.find(c => c.toLowerCase() === (p[2]||'').toLowerCase()) || 'Other';
+    return p[0] ? { project: proj, item: p[0], model: p[1]||'', category: cat, qty: parseInt(p[3])||1, vendor: vendor||'', status: 'pending', lead_time: null, ordered_date: null, eta_date: null, arrived_date: null, dispatched_date: null, notes: '' } : null;
+  }).filter(Boolean);
+  if (!rows.length) { toast('No valid rows found.'); return; }
+  const { error } = await sb.from('items').insert(rows);
+  if (error) { toast('Import failed: ' + error.message); return; }
+  closeModal('import-modal');
+  await loadItems();
+  toast(`${rows.length} items imported`);
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+['item-modal','import-modal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) { if (e.target === this) closeModal(id); });
+});
+
+// Boot
+loadItems();
+</script>
+</body>
+</html>
