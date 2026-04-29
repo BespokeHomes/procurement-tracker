@@ -353,7 +353,7 @@ function filteredItems() {
   return items.filter(i => {
     if (proj && i.project !== proj) return false;
     if (cat && i.category !== cat) return false;
-    if (q) { const terms = q.split(' ').filter(Boolean); const searchable = [i.item, i.model||'', i.project, i.room||'', i.vendor||'', i.notes||''].join(' ').toLowerCase(); if (!terms.every(t => searchable.includes(t))) return false; }
+    if (q) { const terms = q.split(' ').filter(Boolean); const searchable = [i.item, i.model||'', i.project, i.room||'', i.vendor||'', i.notes||'', i.color||''].join(' ').toLowerCase(); if (!terms.every(t => searchable.includes(t))) return false; }
     if (allowed && !allowed.includes(i.status)) return false;
     return true;
   });
