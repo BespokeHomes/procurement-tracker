@@ -404,22 +404,7 @@ async function updateStatus(id, val) {
   await sb.from('items').update({ status:val, arrived_date:item.arrived_date, dispatched_date:item.dispatched_date }).eq('id', id);
   render(); toast(`Marked as "${statusLabels[val]}"`);
 }
-
 function renderCheckin() {
-  const pending = items.filter(i => ['ordered','delayed'].includes(i.status));
-  const list = document.getElementById('checkin-list');
-  if (!pending.length) { list.innerHTML = '<div class="empty-state" style="padding:1.5rem;">No items currently ordered or in transit.</div>'; document.getElementById('checkin-hint').textContent=''; return; }
-  list.innerHTML = pending.map(item => `
-    <div class="checkin-row${checkedIds.has(item.id)?' checked':''}">
-      <input type="checkbox" ${checkedIds.has(item.id)?'checked':''} onchange="toggleCheckin('${item.id}',this.checked)">
-      <div style="flex:1;">
-        <div class="ci-name">${item.item} <span style="font-weight:400;color:var(--text2);">×${item.qty}</span></div>
-        <div class="ci-sub">${item.project}${item.room?' · '+item.room:''}${item.vendor?' · '+item.vendor:''}</div>
-      </div>
-      <span class="ci-model">${item.model||''}</span>
-      ${isOverdue(item)?`<span class="badge b-delayed" style="font-size:10px;">overdue</span>`:`<span style="font-size:11px;color:var(--text3)">ETA ${fmt(item.eta_date)}</span>`}
-    </div>`).join('');
-  document.getElementById('checkin-hint').textContent = checkedIds.size ? `${checkedIds.size} selected` : '';
   const atOffice = items.filter(i => i.status === 'arrived');
   const officeList = document.getElementById('at-office-list');
   if (officeList) {
