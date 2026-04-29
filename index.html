@@ -628,7 +628,7 @@ async function importItems() {
   if (!proj) { toast('Project address is required.'); return; }
   if (!raw) { toast('No items to import — upload a PDF or paste rows.'); return; }
   const vendor = document.getElementById('imp-vendor').value.trim();
-  const cats = ['Bath Accessories','Hardware','Lighting','Mirrors','Plumbing','Tile'];
+  const cats = ['Bath Accessories','Hardware','HVAC','Lighting','Mirrors','Other','Plumbing','Tile'];
   const rows = raw.split('\n').filter(l => l.trim()).map(line => {
     const p = line.split(',').map(s => s.trim());
     const cat = cats.find(c => c.toLowerCase()===(p[2]||'').toLowerCase())||'Bath Accessories';
