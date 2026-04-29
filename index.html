@@ -183,7 +183,7 @@
   <div id="view-checkin" style="display:none;">
     <div class="checkin-wrap">
       <div class="card">
-        <div class="card-title">Tick off items as they arrive</div>
+        <div class="card-title">Tick off items as they arrive</div> <div style="margin-bottom:10px;position:relative;"> <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);">🔍</span> <input type="text" id="checkin-search" placeholder="Search by name, room, brand..." oninput="renderCheckin()" style="width:100%;padding:8px 12px 8px 32px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);"> </div>
         <div class="checkin-list" id="checkin-list"></div>
         <div style="display:flex;gap:10px;align-items:center;margin-top:1rem;flex-wrap:wrap;">
           <button class="btn btn-teal" onclick="confirmCheckins()">✓ Mark selected as arrived</button>
