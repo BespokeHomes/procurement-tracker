@@ -404,7 +404,7 @@ async function updateStatus(id, val) {
 }
 
 function renderCheckin() {
-  const pending = items.filter(i => ['ordered','delayed'].includes(i.status));
+  const searchVal = (document.getElementById('checkin-search')?.value||'').toLowerCase(); const pending = items.filter(i => ['ordered','delayed'].includes(i.status) && (!searchVal || i.item.toLowerCase().includes(searchVal) || (i.room||'').toLowerCase().includes(searchVal) || (i.model||'').toLowerCase().includes(searchVal) || (i.vendor||'').toLowerCase().includes(searchVal)));
   const list = document.getElementById('checkin-list');
   if (!pending.length) { list.innerHTML = '<div class="empty-state" style="padding:1.5rem;">No items currently ordered or in transit.</div>'; document.getElementById('checkin-hint').textContent=''; return; }
   list.innerHTML = pending.map(item => `
