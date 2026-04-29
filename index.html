@@ -432,10 +432,20 @@ function renderCheckin() {
   const officeList = document.getElementById('at-office-list');
   if (officeList) {
     if (!atOffice.length) { officeList.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">Nothing at office yet.</div>'; }
-    else { officeList.innerHTML = atOffice.map(item => `<div class="checkin-row" style="background:var(--accent-light);border-color:rgba(26,92,58,.2);"><span style="color:var(--accent);font-size:16px;">✓</span><div style="flex:1;"><div class="ci-name">${item.item} <span style="font-weight:400;color:var(--text2);">×${item.qty}</span></div><div class="ci-sub">${item.project}${item.room?' · '+item.room:''}${item.vendor?' · '+item.vendor:''}</div></div><span style="font-size:11px;color:var(--accent);">In ${fmt(item.arrived_date)}</span></div>`).join(''); }
+    else { officeList.innerHTML = atOffice.map(item => `<div class="checkin-row" style="background:var(--accent-light);border-color:rgba(26,92,58,.2);"><span style="color:var(--accent);font-size:16px;">✓</span><div style="flex:1;"><div class="ci-name">${item.item} <span style="font-weight:400;color:var(--text2);">×${item.qty}</span></div><div class="ci-sub">${item.project}${item.room?' · '+item.room:''}${item.vendor?' · '+item.vendor:''}</div></div><span style="font-size:11px;color:var(--accent);">In ${fmt(item.arrived_date)}</span><button class="btn btn-teal" style="font-size:11px;padding:4px 10px;margin-left:8px;" onclick="dispatchItem('${item.id}')">→ Dispatch</button></div>`).join(''); }
   }
 }
 
+  async function dispatchItem(id) {
+  const item = items.find(i => i.id===id); if (!item) return;
+  if (!confirm(`Dispatch "${item.item}" to site?`)) return;
+  const t = today();
+  item.status='dispatched'; item.dispatched_date=t;
+  await sb.from('items').update({ status:'dispatched', dispatched_date:t }).eq('id', id);
+  render(); renderCheckin(); toast('Dispatched to site!');
+}
+
+function toggleCheckin
 function toggleCheckin(id, checked) { if (checked) checkedIds.add(id); else checkedIds.delete(id); renderCheckin(); }
 
 async function confirmCheckins() {
