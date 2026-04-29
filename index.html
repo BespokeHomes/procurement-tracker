@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -183,7 +184,7 @@
   <div id="view-checkin" style="display:none;">
     <div class="checkin-wrap">
       <div class="card">
-        <div class="card-title">Tick off items as they arrive</div> <div style="margin-bottom:10px;position:relative;"> <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);">🔍</span> <input type="text" id="checkin-search" placeholder="Search by name, room, brand..." oninput="renderCheckin()" style="width:100%;padding:8px 12px 8px 32px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);"> </div>
+        <div class="card-title">Tick off items as they arrive</div>
         <div class="checkin-list" id="checkin-list"></div>
         <div style="display:flex;gap:10px;align-items:center;margin-top:1rem;flex-wrap:wrap;">
           <button class="btn btn-teal" onclick="confirmCheckins()">✓ Mark selected as arrived</button>
@@ -191,7 +192,7 @@
         </div>
       </div>
 
-      <div class="card" style="margin-top:0;">   <div class="card-title">📬 Currently at office</div>   <div id="at-office-list" class="checkin-list"></div> </div>  <div class="divider"><hr><span>or use AI-assisted check-in</span><hr></div>
+      <div class="divider"><hr><span>or use AI-assisted check-in</span><hr></div>
 
       <div class="card">
         <div class="card-title">📷 Upload photo or order slip</div>
@@ -226,7 +227,8 @@
       <div class="fg"><label>Category</label>
         <select id="f-cat-input"><option>Bath Accessories</option><option>Hardware</option><option>Lighting</option><option>Mirrors</option><option>Plumbing</option><option>Tile</option></select>
       </div>
-      <div class="fg"><label>Quantity</label><input type="number" id="f-qty" value="1" min="1"></div>
+      <div class="fg"><label>Quantity ordered</label><input type="number" id="f-qty" value="1" min="1"></div>
+      <div class="fg"><label>Quantity received</label><input type="number" id="f-received" value="0" min="0"></div>
       <div class="fg"><label>Vendor / Supplier</label><input type="text" id="f-vendor"></div>
       <div class="fg"><label>Lead time (days)</label><input type="number" id="f-leadtime" min="0"></div>
       <div class="fg"><label>Status</label>
@@ -289,7 +291,7 @@
 <script>
 const SUPABASE_URL = 'https://nyasyzchugvqumzjxopu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55YXN5emNodWd2cXVtemp4b3B1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDkyODcsImV4cCI6MjA5Mjk4NTI4N30.Pc9_jceweINaxDtdrMZVSD1D1bkra7-bOmVr7bRKl0s';
-const ANTHROPIC_KEY = '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';
+const ANTHROPIC_KEY = 'REPLACE_WITH_YOUR_ANTHROPIC_KEY';
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let items = [], currentTab = 'all', checkedIds = new Set(), editingId = null;
@@ -378,20 +380,28 @@ function render() {
     return '<span style="color:var(--text3);font-size:11px">—</span>';
   };
   const catKey = (cat) => (cat||'').split(' ')[0];
-  tbody.innerHTML = data.map(item => `
-    <tr>
+  tbody.innerHTML = data.map(item => {
+    const received = item.received_qty || 0;
+    const isPartial = received > 0 && received < item.qty;
+    const isFull = received >= item.qty && item.qty > 0;
+    const qtyDisplay = received > 0 
+      ? `<div style="text-align:center;">${item.qty}</div><div style="font-size:10px;color:${isPartial?'var(--amber)':'var(--accent)'};text-align:center;">${received} rcvd</div>`
+      : `<div style="text-align:center;">${item.qty}</div>`;
+    const partialBadge = isPartial ? `<span style="font-size:10px;background:var(--amber-bg);color:var(--amber);padding:2px 6px;border-radius:20px;margin-left:6px;">partial</span>` : '';
+    return `<tr>
       <td style="font-weight:500;font-size:12px;">${item.project}</td>
       <td style="font-size:12px;color:var(--text2);">${item.room||'<span style="color:var(--text3)">—</span>'}</td>
-      <td><div style="font-size:13px;">${item.item}</div>${item.notes?`<div style="font-size:11px;color:var(--text2);margin-top:2px;">${item.notes.substring(0,45)}${item.notes.length>45?'…':''}</div>`:''}</td>
+      <td><div style="font-size:13px;">${item.item}${partialBadge}</div>${item.notes?`<div style="font-size:11px;color:var(--text2);margin-top:2px;">${item.notes.substring(0,45)}${item.notes.length>45?'…':''}</div>`:''}</td>
       <td><span class="mono">${item.model||'—'}</span></td>
       <td class="hide-mobile"><span class="badge cat-${catKey(item.category)}" style="font-size:10px;padding:2px 7px;">${item.category||'—'}</span></td>
-      <td><div style="text-align:center;">${item.qty}</div>${(item.received_qty||0)>0&&(item.received_qty||0)<item.qty?`<div style="font-size:10px;color:var(--amber);text-align:center;">${item.received_qty} rcvd</div>`:''}</td>
+      <td>${qtyDisplay}</td>
       <td class="hide-mobile" style="font-size:12px;color:var(--text2);">${item.vendor||'—'}</td>
       <td class="${isOverdue(item)?'overdue':''}" style="font-size:12px;">${fmt(item.eta_date)}${isOverdue(item)?' ⚠':''}</td>
       <td><select class="status-pill" onchange="updateStatus('${item.id}',this.value)">${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}"${item.status===v?' selected':''}>${l}</option>`).join('')}</select></td>
       <td class="hide-mobile">${dateCell(item)}</td>
       <td style="white-space:nowrap;"><button class="btn-icon" onclick="quickReceive('${item.id}')" title="Mark received" style="color:var(--accent);">📦</button><button class="btn-icon" onclick="editItem('${item.id}')" title="Edit">✎</button><button class="btn-icon" onclick="removeItem('${item.id}')" title="Delete" style="color:var(--red);">✕</button></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 async function updateStatus(id, val) {
@@ -404,7 +414,7 @@ async function updateStatus(id, val) {
 }
 
 function renderCheckin() {
-  const searchVal = (document.getElementById('checkin-search')?.value||'').toLowerCase(); const pending = items.filter(i => ['ordered','delayed'].includes(i.status) && (!searchVal || i.item.toLowerCase().includes(searchVal) || (i.room||'').toLowerCase().includes(searchVal) || (i.model||'').toLowerCase().includes(searchVal) || (i.vendor||'').toLowerCase().includes(searchVal)));
+  const pending = items.filter(i => ['ordered','delayed'].includes(i.status));
   const list = document.getElementById('checkin-list');
   if (!pending.length) { list.innerHTML = '<div class="empty-state" style="padding:1.5rem;">No items currently ordered or in transit.</div>'; document.getElementById('checkin-hint').textContent=''; return; }
   list.innerHTML = pending.map(item => `
@@ -418,6 +428,12 @@ function renderCheckin() {
       ${isOverdue(item)?`<span class="badge b-delayed" style="font-size:10px;">overdue</span>`:`<span style="font-size:11px;color:var(--text3)">ETA ${fmt(item.eta_date)}</span>`}
     </div>`).join('');
   document.getElementById('checkin-hint').textContent = checkedIds.size ? `${checkedIds.size} selected` : '';
+  const atOffice = items.filter(i => i.status === 'arrived');
+  const officeList = document.getElementById('at-office-list');
+  if (officeList) {
+    if (!atOffice.length) { officeList.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">Nothing at office yet.</div>'; }
+    else { officeList.innerHTML = atOffice.map(item => `<div class="checkin-row" style="background:var(--accent-light);border-color:rgba(26,92,58,.2);"><span style="color:var(--accent);font-size:16px;">✓</span><div style="flex:1;"><div class="ci-name">${item.item} <span style="font-weight:400;color:var(--text2);">×${item.qty}</span></div><div class="ci-sub">${item.project}${item.room?' · '+item.room:''}${item.vendor?' · '+item.vendor:''}</div></div><span style="font-size:11px;color:var(--accent);">In ${fmt(item.arrived_date)}</span></div>`).join(''); }
+  }
 }
 
 function toggleCheckin(id, checked) { if (checked) checkedIds.add(id); else checkedIds.delete(id); renderCheckin(); }
@@ -434,9 +450,9 @@ async function confirmCheckins() {
 }
 
 async function callClaude(messages) {
-  const res = await fetch('/api/claude', {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true', 'anthropic-beta': 'pdfs-2024-09-25' },
+    headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
     body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2000, messages })
   });
   return res.json();
@@ -464,7 +480,7 @@ async function handleUpload(e) {
     const pending = buildPendingList();
     const data = await callClaude([{ role:'user', content:[
       { type:'image', source:{ type:'base64', media_type:mediaType, data:base64 } },
-      { type:'text', text:`You are helping Bespoke Homes check in deliveries. Examine this image for model numbers, item numbers, product codes, or item names.\n\nItems currently on order:\n${pending}\n\nMatch what you see to the list. Respond ONLY with valid JSON:\n{"matched":[{"id":"item_id","item":"name","model":"model#","confidence":"high/medium/low","evidence":"what product name and brand you saw on the box — NOTE: match by product name not model number, as box shows manufacturer codes that differ from vendor order numbers in our system"}],"notes":"brief summary"}` }
+      { type:'text', text:`You are helping Bespoke Homes check in deliveries. Examine this image for model numbers, item numbers, product codes, or item names.\n\nItems currently on order:\n${pending}\n\nMatch what you see to the list. Respond ONLY with valid JSON:\n{"matched":[{"id":"item_id","item":"name","model":"model#","confidence":"high/medium/low","evidence":"what you saw"}],"notes":"brief summary"}` }
     ]}]);
     processAIResponse(data, out);
   };
@@ -555,6 +571,7 @@ function openAdd() {
   ['f-project-input','f-room','f-item','f-model','f-vendor','f-notes'].forEach(id => document.getElementById(id).value='');
   document.getElementById('f-cat-input').value = 'Bath Accessories';
   document.getElementById('f-qty').value = 1;
+  document.getElementById('f-received').value = 0;
   document.getElementById('f-status').value = 'pending';
   ['f-leadtime','f-ordered','f-eta','f-arrived','f-dispatched'].forEach(id => document.getElementById(id).value='');
   document.getElementById('item-modal').classList.add('open');
@@ -569,6 +586,7 @@ function editItem(id) {
   document.getElementById('f-model').value = it.model||'';
   document.getElementById('f-cat-input').value = it.category||'Bath Accessories';
   document.getElementById('f-qty').value = it.qty||1;
+  document.getElementById('f-received').value = it.received_qty||0;
   document.getElementById('f-vendor').value = it.vendor||'';
   document.getElementById('f-status').value = it.status||'pending';
   document.getElementById('f-leadtime').value = it.lead_time||'';
@@ -589,6 +607,7 @@ async function saveItem() {
     model:document.getElementById('f-model').value.trim(),
     category:document.getElementById('f-cat-input').value,
     qty:parseInt(document.getElementById('f-qty').value)||1,
+    received_qty:parseInt(document.getElementById('f-received').value)||0,
     vendor:document.getElementById('f-vendor').value.trim(),
     status:document.getElementById('f-status').value,
     lead_time:parseInt(document.getElementById('f-leadtime').value)||null,
@@ -617,31 +636,7 @@ function openImport() {
   document.getElementById('import-modal').classList.add('open');
 }
 
-async function aiImportText() {
-  const proj = document.getElementById('imp-proj').value.trim();
-  const raw = document.getElementById('imp-data').value.trim();
-  if (!proj) { toast('Project address is required.'); return; }
-  if (!raw) { toast('No items to import — upload a PDF or paste text.'); return; }
-  const vendor = document.getElementById('imp-vendor').value.trim();
-  const st = document.getElementById('pdf-import-status');
-  st.innerHTML = '<div class="ai-result loading"><span class="loading-spinner"></span>Reading pasted text...</div>';
-  const data = await callClaude([{ role:'user', content:`You are helping Bespoke Homes import an order schedule. Extract every product/item from this text.\n\nFor each item extract:\n- item: full product description\n- model: item number or model number\n- category: one of Bath Accessories, Hardware, Lighting, Mirrors, Plumbing, Tile\n- qty: quantity as integer\n- room: room or location\n- vendor: supplier name if listed${vendor?' (default: '+vendor+')':''}\n\nRespond ONLY with valid JSON:\n{"items":[{"item":"desc","model":"#","category":"cat","qty":1,"room":"room","vendor":"vendor"}],"notes":"summary"}\n\nText:\n${raw}` }]);
-  try {
-    const txt = data.content.filter(b => b.type==='text').map(b => b.text).join('');
-    const res = JSON.parse(txt.replace(/```json|```/g,'').trim());
-    if (res.items && res.items.length > 0) {
-      const rows = res.items.map(i => ({ project:proj, item:i.item, model:i.model||'', category:i.category||'Bath Accessories', qty:parseInt(i.qty)||1, room:i.room||null, vendor:i.vendor||vendor||'', status:'pending', lead_time:null, ordered_date:null, eta_date:null, arrived_date:null, dispatched_date:null, notes:'' })).filter(i => i.item);
-      const { error } = await sb.from('items').insert(rows);
-      if (error) { st.innerHTML = `<div class="ai-result error">Import failed: ${error.message}</div>`; return; }
-      closeModal('import-modal'); await loadItems();
-      toast(`${rows.length} items imported for ${proj}`);
-    } else {
-      st.innerHTML = `<div class="ai-result error">No items found. ${res.notes||''}</div>`;
-    }
-  } catch(e) { st.innerHTML = `<div class="ai-result error">Could not parse. Try again.</div>`; }
-}
-  
-  async function importItems() {
+async function importItems() {
   const proj = document.getElementById('imp-proj').value.trim();
   const raw = document.getElementById('imp-data').value.trim();
   if (!proj) { toast('Project address is required.'); return; }
@@ -660,7 +655,7 @@ async function aiImportText() {
   toast(`${rows.length} items imported for ${proj}`);
 }
 
-  async function quickReceive(id) {
+async function quickReceive(id) {
   const item = items.find(i => i.id===id); if (!item) return;
   const current = item.received_qty || 0;
   const remaining = item.qty - current;
@@ -680,7 +675,7 @@ async function aiImportText() {
   if (finalReceived >= item.qty) toast(`All ${item.qty} received — marked as arrived!`);
   else toast(`${finalReceived} of ${item.qty} received — ${item.qty - finalReceived} still pending`);
 }
-  
+
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 ['item-modal','import-modal'].forEach(id => { document.getElementById(id).addEventListener('click', function(e) { if (e.target===this) closeModal(id); }); });
 
