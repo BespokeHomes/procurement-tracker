@@ -152,7 +152,7 @@
       <select class="filter" id="f-project" onchange="render()"><option value="">All projects</option></select>
       <select class="filter" id="f-cat" onchange="render()">
         <option value="">All categories</option>
-        <option>Bath Accessories</option><option>Hardware</option><option>Lighting</option><option>Mirrors</option><option>Plumbing</option><option>Tile</option>
+        <option>Bath Accessories</option><option>Hardware</option><option>HVAC</option><option>Lighting</option><option>Mirrors</option><option>Other</option><option>Plumbing</option><option>Tile</option>
       </select>
       <div class="spacer"></div>
       <span id="row-count" style="font-size:12px;color:var(--text3);"></span>
@@ -184,7 +184,7 @@
   <div id="view-checkin" style="display:none;">
     <div class="checkin-wrap">
    
-      <div class="card">   <div class="card-title">📬 Currently at office</div>   <div id="at-office-list" class="checkin-list"></div> </div> <div class="divider"><hr><span>or use AI-assisted check-in</span><hr></div>
+      <div class="card">   <div class="card-title">📬 Currently At Storage</div>   <div id="at-office-list" class="checkin-list"></div> </div> <div class="divider"><hr><span>or use AI-assisted check-in</span><hr></div>
 
       <div class="card">
         <div class="card-title">📷 Upload photo or order slip</div>
@@ -214,7 +214,7 @@
     <div class="form-grid">
       <div class="fg"><label>Project address *</label><input type="text" id="f-project-input" list="proj-dl"><datalist id="proj-dl"></datalist></div>
       <div class="fg"><label>Room / Location</label><input type="text" id="f-room" placeholder="e.g. Primary Bathroom"></div>
-      <div class="fg full"><label>Item description *</label><input type="text" id="f-item" placeholder="e.g. Brizo Invari Single Robe Hook"></div>
+      <div class="fg full"><label>Item description *</label><input type="text" id="f-item" placeholder="e.g. Brizo Invari Single Robe Hook"></div> <div class="fg"><label>Color / Finish</label><input type="text" id="f-color" placeholder="e.g. Matte Black"></div>
       <div class="fg"><label>Model / Item #</label><input type="text" id="f-model"></div>
       <div class="fg"><label>Category</label>
         <select id="f-cat-input"><option>Bath Accessories</option><option>Hardware</option><option>Lighting</option><option>Mirrors</option><option>Plumbing</option><option>Tile</option></select>
@@ -227,14 +227,14 @@
         <select id="f-status">
           <option value="pending">Pending order</option>
           <option value="ordered">Ordered / in transit</option>
-          <option value="arrived">Arrived at office</option>
+          <option value="arrived">Arrived At Storage</option>
           <option value="dispatched">Dispatched to site</option>
           <option value="delayed">Delayed</option>
         </select>
       </div>
       <div class="fg"><label>Order date</label><input type="date" id="f-ordered"></div>
       <div class="fg"><label>ETA</label><input type="date" id="f-eta"></div>
-      <div class="fg"><label>Arrived at office</label><input type="date" id="f-arrived"></div>
+      <div class="fg"><label>Arrived At Storage</label><input type="date" id="f-arrived"></div>
       <div class="fg"><label>Dispatched to site</label><input type="date" id="f-dispatched"></div>
       <div class="fg full"><label>Notes</label><textarea id="f-notes"></textarea></div>
     </div>
@@ -287,7 +287,7 @@ const ANTHROPIC_KEY = 'sk-ant-api03-0XirUdsAto_1I9TmdXHGvbBxnbY9j6GMcCuTykyBcW5l
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let items = [], currentTab = 'all', checkedIds = new Set(), editingId = null;
-const statusLabels = { pending:'Pending order', ordered:'Ordered / transit', arrived:'At office', dispatched:'Dispatched', delayed:'Delayed' };
+const statusLabels = { pending:'Pending order', ordered:'Ordered / transit', arrived:'In Storage', dispatched:'Dispatched', delayed:'Delayed' };
 const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 function fmt(d) { if (!d) return '<span style="color:var(--text3)">—</span>'; const [y,m,day]=d.split('-'); return `${months[+m-1]} ${parseInt(day)}`; }
@@ -325,7 +325,7 @@ function renderStats() {
     ['All items', items.length, 'all'],
     ['Pending order', c.pending, 'pending'],
     ['Ordered / transit', c.ordered + c.delayed, 'ordered'],
-    ['At office', c.arrived, 'checkin'],
+    ['At Storage', c.arrived, 'checkin'],
     ['At site', c.dispatched, 'dispatched'],
     ['Overdue', ov, null, ov > 0],
   ].map(([label, val, tab, danger]) => `<div class="stat-card${currentTab===tab?' active':''}" ${tab?`onclick="setTab('${tab}')"`:''}><div class="stat-label">${label}</div><div class="stat-value${danger?' danger':''}">${val}</div></div>`).join('');
@@ -353,7 +353,7 @@ function filteredItems() {
   return items.filter(i => {
     if (proj && i.project !== proj) return false;
     if (cat && i.category !== cat) return false;
-    if (q && !i.item.toLowerCase().includes(q) && !(i.model||'').toLowerCase().includes(q) && !i.project.toLowerCase().includes(q) && !(i.room||'').toLowerCase().includes(q)) return false;
+    if (q) { const terms = q.split(' ').filter(Boolean); const searchable = [i.item, i.model||'', i.project, i.room||'', i.vendor||'', i.notes||''].join(' ').toLowerCase(); if (!terms.every(t => searchable.includes(t))) return false; }
     if (allowed && !allowed.includes(i.status)) return false;
     return true;
   });
@@ -383,7 +383,7 @@ function render() {
     return `<tr>
       <td style="font-weight:500;font-size:12px;">${item.project}</td>
       <td style="font-size:12px;color:var(--text2);">${item.room||'<span style="color:var(--text3)">—</span>'}</td>
-      <td><div style="font-size:13px;">${item.item}${partialBadge}</div>${item.notes?`<div style="font-size:11px;color:var(--text2);margin-top:2px;">${item.notes.substring(0,45)}${item.notes.length>45?'…':''}</div>`:''}</td>
+      <td><div style="font-size:13px;">${item.item}${partialBadge}</div>${item.color?`<div style="font-size:11px;color:var(--text2);margin-top:1px;">🎨 ${item.color}</div>`:''}${item.notes?`<div style="font-size:11px;color:var(--text2);margin-top:2px;">${item.notes.substring(0,45)}${item.notes.length>45?'…':''}</div>`:''}</td>
       <td><span class="mono">${item.model||'—'}</span></td>
       <td class="hide-mobile"><span class="badge cat-${catKey(item.category)}" style="font-size:10px;padding:2px 7px;">${item.category||'—'}</span></td>
       <td>${qtyDisplay}</td>
@@ -408,7 +408,7 @@ function renderCheckin() {
   const atOffice = items.filter(i => i.status === 'arrived');
   const officeList = document.getElementById('at-office-list');
   if (officeList) {
-    if (!atOffice.length) { officeList.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">Nothing at office yet.</div>'; }
+    if (!atOffice.length) { officeList.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">Nothing At Storage yet.</div>'; }
     else { officeList.innerHTML = atOffice.map(item => `<div class="checkin-row" style="background:var(--accent-light);border-color:rgba(26,92,58,.2);"><span style="color:var(--accent);font-size:16px;">✓</span><div style="flex:1;"><div class="ci-name">${item.item} <span style="font-weight:400;color:var(--text2);">×${item.qty}</span></div><div class="ci-sub">${item.project}${item.room?' · '+item.room:''}${item.vendor?' · '+item.vendor:''}</div></div><span style="font-size:11px;color:var(--accent);">In ${fmt(item.arrived_date)}</span><button class="btn btn-teal" style="font-size:11px;padding:4px 10px;margin-left:8px;" onclick="dispatchItem('${item.id}')">→ Dispatch</button></div>`).join(''); }
   }
 }
@@ -600,7 +600,7 @@ async function saveItem() {
     eta_date:document.getElementById('f-eta').value||null,
     arrived_date:document.getElementById('f-arrived').value||null,
     dispatched_date:document.getElementById('f-dispatched').value||null,
-    notes:document.getElementById('f-notes').value.trim(),
+    notes:document.getElementById('f-notes').value.trim(), color:document.getElementById('f-color').value.trim(),
   };
   if (editingId) data.id = editingId;
   const ok = await upsertItem(data);
