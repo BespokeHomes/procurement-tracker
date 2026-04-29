@@ -391,7 +391,7 @@ function render() {
       <td class="${isOverdue(item)?'overdue':''}" style="font-size:12px;">${fmt(item.eta_date)}${isOverdue(item)?' ⚠':''}</td>
       <td><select class="status-pill" onchange="updateStatus('${item.id}',this.value)">${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}"${item.status===v?' selected':''}>${l}</option>`).join('')}</select></td>
       <td class="hide-mobile">${dateCell(item)}</td>
-      <td style="white-space:nowrap;"><button class="btn-icon" onclick="editItem('${item.id}')" title="Edit">✎</button><button class="btn-icon" onclick="removeItem('${item.id}')" title="Delete" style="color:var(--red);">✕</button></td>
+      <td style="white-space:nowrap;"><button class="btn-icon" onclick="quickReceive('${item.id}')" title="Mark received" style="color:var(--accent);">📦</button><button class="btn-icon" onclick="editItem('${item.id}')" title="Edit">✎</button><button class="btn-icon" onclick="removeItem('${item.id}')" title="Delete" style="color:var(--red);">✕</button></td>
     </tr>`).join('');
 }
 
@@ -661,6 +661,27 @@ async function aiImportText() {
   toast(`${rows.length} items imported for ${proj}`);
 }
 
+  async function quickReceive(id) {
+  const item = items.find(i => i.id===id); if (!item) return;
+  const current = item.received_qty || 0;
+  const remaining = item.qty - current;
+  if (remaining <= 0) { toast('All quantities already received.'); return; }
+  const input = prompt(`How many received today?\n${item.item}\n(${current} of ${item.qty} already received, ${remaining} still expected)`, remaining);
+  if (input === null) return;
+  const added = parseInt(input);
+  if (isNaN(added) || added <= 0) { toast('Invalid quantity.'); return; }
+  const finalReceived = Math.min(current + added, item.qty);
+  const t = today();
+  const newStatus = finalReceived >= item.qty ? 'arrived' : 'ordered';
+  item.received_qty = finalReceived;
+  item.status = newStatus;
+  if (finalReceived >= item.qty) item.arrived_date = t;
+  await sb.from('items').update({ received_qty: finalReceived, status: newStatus, arrived_date: finalReceived >= item.qty ? t : item.arrived_date }).eq('id', id);
+  render();
+  if (finalReceived >= item.qty) toast(`All ${item.qty} received — marked as arrived!`);
+  else toast(`${finalReceived} of ${item.qty} received — ${item.qty - finalReceived} still pending`);
+}
+  
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 ['item-modal','import-modal'].forEach(id => { document.getElementById(id).addEventListener('click', function(e) { if (e.target===this) closeModal(id); }); });
 
