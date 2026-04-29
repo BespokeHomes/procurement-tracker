@@ -169,7 +169,7 @@
               <th class="hide-mobile">Category</th>
               <th>Qty</th>
               <th class="hide-mobile">Vendor</th>
-              <th>ETA</th>
+              <th class="hide-mobile">Color</th> <th>ETA</th>
               <th>Status</th>
               <th class="hide-mobile">Dates</th>
               <th></th>
@@ -383,12 +383,12 @@ function render() {
     return `<tr>
       <td style="font-weight:500;font-size:12px;">${item.project}</td>
       <td style="font-size:12px;color:var(--text2);">${item.room||'<span style="color:var(--text3)">—</span>'}</td>
-      <td><div style="font-size:13px;">${item.item}${partialBadge}</div>${item.color?`<div style="font-size:11px;color:var(--text2);margin-top:1px;">🎨 ${item.color}</div>`:''}${item.notes?`<div style="font-size:11px;color:var(--text2);margin-top:2px;">${item.notes.substring(0,45)}${item.notes.length>45?'…':''}</div>`:''}</td>
+      <td><div style="font-size:13px;">${item.item}${partialBadge}</div>${item.notes?`<div style="font-size:11px;color:var(--text2);margin-top:2px;">${item.notes.substring(0,45)}${item.notes.length>45?'…':''}</div>`:''}</td>
       <td><span class="mono">${item.model||'—'}</span></td>
       <td class="hide-mobile"><span class="badge cat-${catKey(item.category)}" style="font-size:10px;padding:2px 7px;">${item.category||'—'}</span></td>
       <td>${qtyDisplay}</td>
       <td class="hide-mobile" style="font-size:12px;color:var(--text2);">${item.vendor||'—'}</td>
-      <td class="${isOverdue(item)?'overdue':''}" style="font-size:12px;">${fmt(item.eta_date)}${isOverdue(item)?' ⚠':''}</td>
+      <td class="hide-mobile" style="font-size:12px;color:var(--text2);">${item.color||'—'}</td> <td class="${isOverdue(item)?'overdue':''}" style="font-size:12px;">${fmt(item.eta_date)}${isOverdue(item)?' ⚠':''}</td>
       <td><select class="status-pill" onchange="updateStatus('${item.id}',this.value)">${Object.entries(statusLabels).map(([v,l])=>`<option value="${v}"${item.status===v?' selected':''}>${l}</option>`).join('')}</select></td>
       <td class="hide-mobile">${dateCell(item)}</td>
       <td style="white-space:nowrap;"><button class="btn-icon" onclick="quickReceive('${item.id}')" title="Mark received" style="color:var(--accent);">📦</button><button class="btn-icon" onclick="editItem('${item.id}')" title="Edit">✎</button><button class="btn-icon" onclick="removeItem('${item.id}')" title="Delete" style="color:var(--red);">✕</button></td>
