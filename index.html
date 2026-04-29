@@ -291,7 +291,7 @@
 <script>
 const SUPABASE_URL = 'https://nyasyzchugvqumzjxopu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55YXN5emNodWd2cXVtemp4b3B1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDkyODcsImV4cCI6MjA5Mjk4NTI4N30.Pc9_jceweINaxDtdrMZVSD1D1bkra7-bOmVr7bRKl0s';
-const ANTHROPIC_KEY = 'REPLACE_WITH_YOUR_ANTHROPIC_KEY';
+const ANTHROPIC_KEY = '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';
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let items = [], currentTab = 'all', checkedIds = new Set(), editingId = null;
@@ -444,8 +444,6 @@ function renderCheckin() {
   await sb.from('items').update({ status:'dispatched', dispatched_date:t }).eq('id', id);
   render(); renderCheckin(); toast('Dispatched to site!');
 }
-
-function toggleCheckin
 function toggleCheckin(id, checked) { if (checked) checkedIds.add(id); else checkedIds.delete(id); renderCheckin(); }
 
 async function confirmCheckins() {
@@ -460,7 +458,7 @@ async function confirmCheckins() {
 }
 
 async function callClaude(messages) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/claude', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
     body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 2000, messages })
