@@ -464,7 +464,7 @@ async function handleUpload(e) {
     const pending = buildPendingList();
     const data = await callClaude([{ role:'user', content:[
       { type:'image', source:{ type:'base64', media_type:mediaType, data:base64 } },
-      { type:'text', text:`You are helping Bespoke Homes check in deliveries. Examine this image for model numbers, item numbers, product codes, or item names.\n\nItems currently on order:\n${pending}\n\nMatch what you see to the list. Respond ONLY with valid JSON:\n{"matched":[{"id":"item_id","item":"name","model":"model#","confidence":"high/medium/low","evidence":"what you saw"}],"notes":"brief summary"}` }
+      { type:'text', text:`You are helping Bespoke Homes check in deliveries. Examine this image for model numbers, item numbers, product codes, or item names.\n\nItems currently on order:\n${pending}\n\nMatch what you see to the list. Respond ONLY with valid JSON:\n{"matched":[{"id":"item_id","item":"name","model":"model#","confidence":"high/medium/low","evidence":"what product name and brand you saw on the box — NOTE: match by product name not model number, as box shows manufacturer codes that differ from vendor order numbers in our system"}],"notes":"brief summary"}` }
     ]}]);
     processAIResponse(data, out);
   };
