@@ -184,25 +184,7 @@
   <div id="view-checkin" style="display:none;">
     <div class="checkin-wrap">
    
-      <div class="card">   <div class="card-title">📬 Currently At Storage</div>   <div id="at-office-list" class="checkin-list"></div> </div> <div class="divider"><hr><span>or use AI-assisted check-in</span><hr></div>
-
-      <div class="card">
-        <div class="card-title">📷 Upload photo or order slip</div>
-        <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">Photo of a box label, shipping receipt, or packing slip — Claude will match model numbers to your pending items automatically.</p>
-        <div class="upload-zone" onclick="document.getElementById('file-upload').click()">
-          <div class="upload-icon">📦</div>
-          <div class="upload-label">Tap to upload image</div>
-          <div class="upload-hint">JPG, PNG supported · iPhone: Settings → Camera → Formats → Most Compatible</div>
-        </div>
-        <input type="file" id="file-upload" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" onchange="handleUpload(event)">
-        <div class="divider" style="margin:12px 0;"><hr><span>or paste order confirmation text</span><hr></div>
-        <textarea id="paste-text" placeholder="Paste text from order confirmation email, invoice, or packing slip..." style="width:100%;height:90px;font-size:13px;padding:10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);resize:vertical;"></textarea>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button class="btn btn-teal" onclick="parseText()">Match to pending items ↗</button>
-          <button class="btn" onclick="document.getElementById('paste-text').value='';document.getElementById('ai-out').innerHTML=''">Clear</button>
-        </div>
-        <div id="ai-out"></div>
-      </div>
+<div class="card"><div class="card-title">📬 Currently At Storage</div><div style="margin-bottom:10px;"><input type="text" id="storage-search" placeholder="Search storage items..." oninput="renderCheckin()" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-size:13px;font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);"></div><div id="at-office-list" class="checkin-list"></div></div>
     </div>
   </div>
 </main>
@@ -255,18 +237,8 @@
         <div class="fg"><label>Vendor (optional)</label><input type="text" id="imp-vendor" style="height:36px;"></div>
       </div>
 
-      <div class="divider"><hr><span>Upload PDF schedule</span><hr></div>
-
-      <div class="upload-zone" onclick="document.getElementById('pdf-upload').click()">
-        <div class="upload-icon">📄</div>
-        <div class="upload-label">Tap to upload your schedule PDF</div>
-        <div class="upload-hint">Claude reads your schedule and extracts all items, rooms, models, and quantities automatically</div>
-      </div>
-      <input type="file" id="pdf-upload" accept=".pdf,application/pdf" style="display:none;" onchange="handlePDFImport(event)">
-      <div id="pdf-import-status"></div>
-
-      <div class="divider"><hr><span>or paste rows manually</span><hr></div>
-
+      <div class="divider"><hr><span>Paste rows manually</span><hr></div>
+      
       <div class="fg">
         <label>One item per line: Description, Model#, Category, Qty, Room</label>
         <textarea id="imp-data" style="height:100px;font-family:'DM Mono',monospace;font-size:12px;" placeholder="Brizo Invari Tank Lever, bci4228552, Bath Accessories, 1, Primary Bathroom&#10;Naomi Single Hook, 4787670, Bath Accessories, 4, Primary Bathroom"></textarea>
@@ -405,7 +377,7 @@ async function updateStatus(id, val) {
   render(); toast(`Marked as "${statusLabels[val]}"`);
 }
 function renderCheckin() {
-  const atOffice = items.filter(i => i.status === 'arrived');
+  const sq = (document.getElementById('storage-search')?.value||'').toLowerCase(); const atOffice = items.filter(i => i.status === 'arrived' && (!sq || i.item.toLowerCase().includes(sq) || (i.room||'').toLowerCase().includes(sq) || (i.vendor||'').toLowerCase().includes(sq)));
   const officeList = document.getElementById('at-office-list');
   if (officeList) {
     if (!atOffice.length) { officeList.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">Nothing At Storage yet.</div>'; }
@@ -618,7 +590,6 @@ function openImport() {
   document.getElementById('imp-proj').value='';
   document.getElementById('imp-data').value='';
   document.getElementById('imp-vendor').value='';
-  document.getElementById('pdf-import-status').innerHTML='';
   document.getElementById('import-modal').classList.add('open');
 }
 
