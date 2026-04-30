@@ -149,9 +149,17 @@
         <input type="text" id="search" placeholder="Search item, model, room..." oninput="render()">
       </div>
       <select class="filter" id="f-project" onchange="render()"><option value="">All projects</option></select>
-      <select class="filter" id="f-cat" onchange="render()">
+    <select class="filter" id="f-cat" onchange="render()">
         <option value="">All categories</option>
         <option>Bath Accessories</option><option>Hardware</option><option>HVAC</option><option>Lighting</option><option>Mirrors</option><option>Other</option><option>Plumbing</option><option>Tile</option>
+      </select>
+      <select class="filter" id="f-status-filter" onchange="render()">
+        <option value="">All statuses</option>
+        <option value="pending">Pending order</option>
+        <option value="ordered">Ordered / transit</option>
+        <option value="arrived">In Storage</option>
+        <option value="dispatched">Dispatched</option>
+        <option value="delayed">Delayed</option>
       </select>
       <div class="spacer"></div>
       <span id="row-count" style="font-size:12px;color:var(--text3);"></span>
@@ -326,7 +334,7 @@ function filteredItems() {
     if (proj && i.project !== proj) return false;
     if (cat && i.category !== cat) return false;
     if (q) { const terms = q.split(' ').filter(Boolean); const searchable = [i.item, i.model||'', i.project, i.room||'', i.vendor||'', i.notes||'', i.color||''].join(' ').toLowerCase(); if (!terms.every(t => searchable.includes(t))) return false; }
-   if (allowed && !allowed.includes(i.status)) return false;
+   const statusFilter = document.getElementById('f-status-filter').value;     if (statusFilter && i.status !== statusFilter) return false;     if (allowed && !allowed.includes(i.status)) return false;
     if (currentTab === 'overdue' && !isOverdue(i)) return false;
     return true;
   });
