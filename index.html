@@ -299,7 +299,7 @@ function renderStats() {
     ['Ordered / transit', c.ordered + c.delayed, 'ordered'],
     ['At Storage', c.arrived, 'checkin'],
     ['At site', c.dispatched, 'dispatched'],
-    ['Overdue', ov, null, ov > 0],
+    ['Overdue', ov, 'overdue', ov > 0],
   ].map(([label, val, tab, danger]) => `<div class="stat-card${currentTab===tab?' active':''}" ${tab?`onclick="setTab('${tab}')"`:''}><div class="stat-label">${label}</div><div class="stat-value${danger?' danger':''}">${val}</div></div>`).join('');
 
   document.getElementById('tabs').innerHTML = [
@@ -307,8 +307,9 @@ function renderStats() {
     ['pending','Pending', c.pending],
     ['ordered','Ordered / transit', c.ordered + c.delayed],
     ['checkin','Check in arrivals', c.arrived],
-    ['dispatched','Dispatched to site', c.dispatched],
-  ].map(([id,label,count]) => `<button class="tab-btn${currentTab===id?' active':''}" onclick="setTab('${id}')">${label}<span class="tab-count">${count}</span></button>`).join('');
+['dispatched','Dispatched to site', c.dispatched],
+    ['overdue','Overdue', ov],
+  ].map(([id,label,count]) =>`<button class="tab-btn${currentTab===id?' active':''}" onclick="setTab('${id}')">${label}<span class="tab-count">${count}</span></button>`).join('');
 
   const projs = getProjects();
   ['proj-dl','imp-proj-dl'].forEach(dlId => { const dl = document.getElementById(dlId); if (dl) dl.innerHTML = projs.map(p => `<option value="${p}">`).join(''); });
@@ -320,13 +321,14 @@ function filteredItems() {
   const proj = document.getElementById('f-project').value;
   const cat = document.getElementById('f-cat').value;
   const q = (document.getElementById('search').value || '').toLowerCase();
-  const tabFilter = { all:null, pending:['pending'], ordered:['ordered','delayed'], dispatched:['dispatched'] };
+  const tabFilter = { all:null, pending:['pending'], ordered:['ordered','delayed'], dispatched:['dispatched'], overdue:null };
   const allowed = tabFilter[currentTab];
   return items.filter(i => {
     if (proj && i.project !== proj) return false;
     if (cat && i.category !== cat) return false;
     if (q) { const terms = q.split(' ').filter(Boolean); const searchable = [i.item, i.model||'', i.project, i.room||'', i.vendor||'', i.notes||'', i.color||''].join(' ').toLowerCase(); if (!terms.every(t => searchable.includes(t))) return false; }
-    if (allowed && !allowed.includes(i.status)) return false;
+   if (allowed && !allowed.includes(i.status)) return false;
+    if (currentTab === 'overdue' && !isOverdue(i)) return false;
     return true;
   });
 }
