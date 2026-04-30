@@ -377,7 +377,7 @@ async function updateStatus(id, val) {
   render(); toast(`Marked as "${statusLabels[val]}"`);
 }
 function renderCheckin() {
-  const sq = (document.getElementById('storage-search')?.value||'').toLowerCase(); const atOffice = items.filter(i => i.status === 'arrived' && (!sq || i.item.toLowerCase().includes(sq) || (i.room||'').toLowerCase().includes(sq) || (i.vendor||'').toLowerCase().includes(sq)));
+  const sq = (document.getElementById('storage-search')?.value||'').toLowerCase(); const sqTerms = sq.split(' ').filter(Boolean); const atOffice = items.filter(i => { if (i.status !== 'arrived') return false; if (!sqTerms.length) return true; const searchable = [i.item, i.room||'', i.vendor||'', i.project||'', i.model||'', i.color||'', i.notes||''].join(' ').toLowerCase(); return sqTerms.every(t => searchable.includes(t)); });
   const officeList = document.getElementById('at-office-list');
   if (officeList) {
     if (!atOffice.length) { officeList.innerHTML = '<div style="padding:12px;color:var(--text3);font-size:13px;">Nothing At Storage yet.</div>'; }
