@@ -60,6 +60,11 @@
   .table-scroll { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   thead th { background: var(--surface2); padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  thead th.sortable { cursor: pointer; user-select: none; }
+  thead th.sortable:hover { color: var(--accent); }
+  thead th.sorted { color: var(--accent); }
+  .sort-arrow { margin-left: 4px; font-size: 10px; opacity: 0.5; }
+  thead th.sorted .sort-arrow { opacity: 1; }
   tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text); }
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover td { background: #fafaf8; }
@@ -157,10 +162,18 @@
         <table>
           <thead>
             <tr>
-              <th>Project</th><th>Room</th><th>Item</th><th>Model #</th>
-              <th class="hide-mobile">Category</th><th>Qty</th>
-              <th class="hide-mobile">Vendor</th><th class="hide-mobile">Color</th>
-              <th>ETA</th><th>Status</th><th class="hide-mobile">Dates</th><th></th>
+              <th>Project</th>
+              <th class="sortable" id="th-room" onclick="toggleSort('room')">Room <span class="sort-arrow" id="arrow-room">↕</span></th>
+              <th>Item</th>
+              <th>Model #</th>
+              <th class="hide-mobile">Category</th>
+              <th>Qty</th>
+              <th class="hide-mobile sortable" id="th-vendor" onclick="toggleSort('vendor')">Vendor <span class="sort-arrow" id="arrow-vendor">↕</span></th>
+              <th class="hide-mobile">Color</th>
+              <th>ETA</th>
+              <th>Status</th>
+              <th class="hide-mobile">Dates</th>
+              <th></th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -250,7 +263,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const ANTHROPIC_KEY = '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';
 
 // ── READ-ONLY MODE ───────────────────────────────────────────
-const EDIT_PASSWORD = 'bespoke2024'; // Change this to your preferred password
+const EDIT_PASSWORD = 'bespoke2024';
 const canEdit = sessionStorage.getItem('bh_edit') === EDIT_PASSWORD;
 
 function promptPassword() {
@@ -262,7 +275,7 @@ function logout() { sessionStorage.removeItem('bh_edit'); location.reload(); }
 // ────────────────────────────────────────────────────────────
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-let items = [], currentTab = 'all', editingId = null;
+let items = [], currentTab = 'all', editingId = null, sortField = null, sortDir = 'asc';
 const statusLabels = { pending:'Pending order', ordered:'Ordered / transit', arrived:'In Storage', dispatched:'Dispatched', delayed:'Delayed' };
 const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -271,6 +284,28 @@ function today() { return new Date().toISOString().split('T')[0]; }
 function isOverdue(i) { return i.eta_date && i.eta_date < today() && !['arrived','dispatched'].includes(i.status); }
 function getProjects() { return [...new Set(items.map(i => i.project))].sort(); }
 function toast(msg) { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2800); }
+
+function toggleSort(field) {
+  if (sortField === field) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortField = field;
+    sortDir = 'asc';
+  }
+  ['room','vendor'].forEach(f => {
+    const th = document.getElementById('th-' + f);
+    const arrow = document.getElementById('arrow-' + f);
+    if (!th || !arrow) return;
+    if (sortField === f) {
+      th.classList.add('sorted');
+      arrow.textContent = sortDir === 'asc' ? '↑' : '↓';
+    } else {
+      th.classList.remove('sorted');
+      arrow.textContent = '↕';
+    }
+  });
+  render();
+}
 
 function initUI() {
   if (!canEdit) {
@@ -346,6 +381,11 @@ function filteredItems() {
     if (allowed && !allowed.includes(i.status)) return false;
     if (currentTab === 'overdue' && !isOverdue(i)) return false;
     return true;
+  }).sort((a, b) => {
+    if (!sortField) return 0;
+    const av = (a[sortField] || '').toLowerCase();
+    const bv = (b[sortField] || '').toLowerCase();
+    return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
   });
 }
 
