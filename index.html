@@ -260,7 +260,6 @@
 <script>
 const SUPABASE_URL = 'https://nyasyzchugvqumzjxopu.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55YXN5emNodWd2cXVtemp4b3B1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDkyODcsImV4cCI6MjA5Mjk4NTI4N30.Pc9_jceweINaxDtdrMZVSD1D1bkra7-bOmVr7bRKl0s';
-const ANTHROPIC_KEY = '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';
 
 // ── READ-ONLY MODE ───────────────────────────────────────────
 const EDIT_PASSWORD = 'bespoke2024';
@@ -319,11 +318,41 @@ function initUI() {
   }
 }
 
+// ── PAGINATED FETCH ──────────────────────────────────────────
+// Supabase caps a single SELECT at 1000 rows. Page through in batches
+// using .range() until we've loaded everything.
 async function loadItems() {
-  const { data, error } = await sb.from('items').select('*').order('created_at', { ascending: false });
-  if (error) { console.error(error); return; }
-  items = data || []; render();
+  const batchSize = 1000;
+  const allItems = [];
+  let from = 0;
+
+  while (true) {
+    const { data, error } = await sb
+      .from('items')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(from, from + batchSize - 1);
+
+    if (error) {
+      console.error('loadItems error:', error);
+      toast('Failed to load items — check console');
+      return;
+    }
+    if (!data || data.length === 0) break;
+
+    allItems.push(...data);
+
+    // Last batch — no more rows to fetch
+    if (data.length < batchSize) break;
+
+    from += batchSize;
+  }
+
+  console.log(`Loaded ${allItems.length} items in ${Math.ceil(allItems.length / batchSize)} batch(es)`);
+  items = allItems;
+  render();
 }
+// ────────────────────────────────────────────────────────────
 
 async function upsertItem(item) {
   if (!canEdit) { toast('View-only mode — no changes saved.'); return false; }
